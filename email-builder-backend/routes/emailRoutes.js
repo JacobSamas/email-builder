@@ -17,6 +17,10 @@ router.get('/getEmailLayout', emailController.getEmailLayout);
 router.post('/uploadEmailConfig', emailController.uploadEmailConfig);
 router.post('/renderAndDownloadTemplate', emailController.renderAndDownloadTemplate);
 router.get('/getAllTemplates', emailController.getAllTemplates);
+router.get('/getTemplate/:id', emailController.getTemplateById);
+router.get('/downloadTemplate/:id', emailController.downloadTemplateById);
+
+
 
 // Image Upload Route
 router.post('/uploadImage', upload.single('image'), (req, res) => {

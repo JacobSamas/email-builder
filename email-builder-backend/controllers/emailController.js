@@ -63,3 +63,46 @@ exports.getAllTemplates = async (req, res) => {
         res.status(500).json({ error: 'Failed to retrieve templates' });
     }
 };
+
+// Get email template by ID
+exports.getTemplateById = async (req, res) => {
+  try {
+    const template = await EmailTemplate.findById(req.params.id);
+    if (!template) {
+      return res.status(404).json({ success: false, message: "Template not found" });
+    }
+    res.json({ success: true, template });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching template" });
+  }
+};
+
+// Download email template by ID
+exports.downloadTemplateById = async (req, res) => {
+  try {
+    const template = await EmailTemplate.findById(req.params.id);
+    if (!template) {
+      return res.status(404).json({ success: false, message: "Template not found" });
+    }
+
+    const renderedHTML = `
+      <html>
+      <head><title>${template.title}</title></head>
+      <body>
+        <h1>${template.title}</h1>
+        <p>${template.content}</p>
+        <footer>${template.footer}</footer>
+        ${template.imageUrl ? `<img src="${template.imageUrl}" alt="Email Image" style="max-width:100%;"/>` : ""}
+      </body>
+      </html>
+    `;
+
+    res.setHeader('Content-Disposition', `attachment; filename="email-template-${template._id}.html"`);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(renderedHTML);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error generating template download" });
+  }
+};
+
+
