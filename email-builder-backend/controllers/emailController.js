@@ -1,46 +1,65 @@
-const fs = require('fs');
-const path = require('path');
 const EmailTemplate = require('../models/EmailTemplate');
+const path = require('path');
+const fs = require('fs');
 
-// Fetch the email layout
+// Get email layout template
 exports.getEmailLayout = (req, res) => {
-  const layoutPath = path.join(__dirname, '../layout.html');
-  fs.readFile(layoutPath, 'utf-8', (err, data) => {
-    if (err) {
-      return res.status(500).json({ message: 'Failed to load layout' });
-    }
-    res.send(data);
-  });
+    const layoutPath = path.join(__dirname, '../templates/layout.html');
+    fs.readFile(layoutPath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to load email layout' });
+        }
+        res.send(data);
+    });
 };
 
-// Save email configuration
+// Save email template to database
 exports.uploadEmailConfig = async (req, res) => {
-  try {
-    const emailTemplate = new EmailTemplate(req.body);
-    await emailTemplate.save();
-    res.json({ success: true, emailTemplate });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to save email config', error });
-  }
+    try {
+        const { title, content, footer, imageUrl } = req.body;
+
+        if (!title || !content || !footer) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const newTemplate = new EmailTemplate({
+            title,
+            content,
+            footer,
+            imageUrl,
+        });
+
+        await newTemplate.save();
+        res.status(201).json({ success: true, template: newTemplate });
+    } catch (error) {
+        console.error('Error saving template:', error);
+        res.status(500).json({ error: 'Failed to save template' });
+    }
 };
 
-// Render and download the final HTML
+// Render email template and download
 exports.renderAndDownloadTemplate = (req, res) => {
-  const { title, content, footer, imageUrl } = req.body;
+    const { title, content, footer, imageUrl } = req.body;
 
-  const layoutPath = path.join(__dirname, '../layout.html');
-  fs.readFile(layoutPath, 'utf-8', (err, data) => {
-    if (err) {
-      return res.status(500).json({ message: 'Failed to load layout' });
+    const emailHtml = `
+        <h1>${title}</h1>
+        <p>${content}</p>
+        ${imageUrl ? `<img src="${imageUrl}" alt="Email Image"/>` : ''}
+        <footer>${footer}</footer>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.attachment('email-template.html');
+    res.send(emailHtml);
+};
+
+// Get all saved email templates
+exports.getAllTemplates = async (req, res) => {
+    try {
+        const templates = await EmailTemplate.find().sort({ createdAt: -1 });
+        res.status(200).json({ success: true, templates });
+    } catch (error) {
+        console.error('Error retrieving templates:', error);
+        res.status(500).json({ error: 'Failed to retrieve templates' });
     }
-
-    const renderedHtml = data
-      .replace('{{title}}', title)
-      .replace('{{content}}', content)
-      .replace('{{footer}}', footer)
-      .replace('{{imageUrl}}', imageUrl);
-
-    res.setHeader('Content-Disposition', 'attachment; filename="email.html"');
-    res.send(renderedHtml);
-  });
 };
